@@ -25,7 +25,7 @@ global velprop
 global Zc
 global faultdistance
 global combo
-global canvas
+global canvas, canvas2
 
 
 win = tkinter.Tk()
@@ -46,6 +46,7 @@ def UploadAction():
 def UploadAction2():
     global filename_arrays
     filename_arrays = filedialog.askopenfilenames()
+    print(len(filename_arrays))
     
 
 def FaultLoc():
@@ -95,7 +96,7 @@ def FaultLoc():
     Vd_k_vector = np.zeros((contador))
     Vq_k_vector = np.zeros((contador))
     V0_k_vector = np.zeros((contador))
-    
+
     theta = 0
 
     for i in range(contador):
@@ -106,7 +107,7 @@ def FaultLoc():
         phi = i*delta_t*2*np.pi*60 + theta
 
         T_dq0 = (2/3) * np.array([[np.cos(phi),np.cos(phi-(2/3)*np.pi), np.cos(phi+(2/3)*np.pi)],[-np.sin(phi),-np.sin(phi-(2/3)*np.pi), -np.sin(phi+(2/3)*np.pi)],[0.5, 0.5,0.5]])
-  
+
         Adq0_k = np.dot(T_dq0, Aabc_k)
         Vdq0_k = np.dot(T_dq0, Vabc_k)
 
@@ -127,159 +128,167 @@ def FaultLoc():
         Vq_k_vector[i] = Vq_k
         V0_k_vector[i] = V0_k
 
-    # Ondas Viajeras
-    S_forward = -Vd_k_vector + Zc*Ad_k_vector
-    S_backward = Vd_k_vector + Zc*Ad_k_vector
+        # Ondas Viajeras
+        S_forward = -Vd_k_vector + Zc*Ad_k_vector
+        S_backward = Vd_k_vector + Zc*Ad_k_vector
 
-    #Filtro
-    tau = 1.56e06
-    w = 20e03/tau
-    b1, a1 = signal.butter(3, w, 'high')
-    S_f = signal.filtfilt(b1, a1, S_forward,axis=0)
+        #Filtro
+        tau = 1.56e06
+        w = 20e03/tau
+        b1, a1 = signal.butter(3, w, 'high')
+        S_f = signal.filtfilt(b1, a1, S_forward,axis=0)
 
-    b2, a2 = signal.butter(3, w, 'high')
-    S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
+        b2, a2 = signal.butter(3, w, 'high')
+        S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
 
-    #Correlacion
+        #Correlacion
 
-    corr = np.correlate(S_b,S_f,mode="same")/contador
-    peaks, _ = find_peaks(corr)
+        corr = np.correlate(S_b,S_f,mode="same")/contador
+        peaks, _ = find_peaks(corr)
 
-    taus = np.zeros(len(peaks))
-    for i in range(0,len(peaks)):
-        taus[i] = corr[peaks[i]]
+        taus = np.zeros(len(peaks))
+        for i in range(0,len(peaks)):
+            taus[i] = corr[peaks[i]]
 
-    print(taus)
+        print(taus)
 
-    max_taus = heapq.nlargest(2, taus)
-   
-    tau_1 = np.argwhere(taus == max_taus[0]).astype(int)
-    tau_2 = np.argwhere(taus== max_taus[1]).astype(int)
-    # tau_f = np.argmax(corr)
+        max_taus = heapq.nlargest(2, taus)
 
-    d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
-    d = round(d[0,0],4)
-    print(d)
-    labelText.set(d)
+        tau_1 = np.argwhere(taus == max_taus[0]).astype(int)
+        tau_2 = np.argwhere(taus== max_taus[1]).astype(int)
+        # tau_f = np.argmax(corr)
 
-    # error = (np.abs(faultdistance-d)/(faultdistance))*100
-    # error = round(error,4)
-    # labelText2.set(error)
+        d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
+        d = round(d[0,0],4)
+        print(d)
+        labelText.set(d)
+
+# error = (np.abs(faultdistance-d)/(faultdistance))*100
+# error = round(error,4)
+# labelText2.set(error)
+
+def FaultLoc2():
+    global d
+    global line_distance, error 
+    global filename_arrays
+    global delta_t, Zc,velprop
+    global error_array,vector_distancia
+
+    calculo = int(100/(len(filename_arrays)))
+    print('calculo')
+    print(calculo)
+    count = 0
+    vector_distancia = np.zeros(len(filename_arrays))
+    for i in range(len(vector_distancia)):
+        vector_distancia[i] = 100/(len(filename_arrays))*(i+1)
     
-    def FaultLoc2():
-        global d,error_array,vector_distancia
-        global line_distance, error 
+    error_array = np.zeros(len(filename_arrays))
 
-        count = 0
-        vector_distancia = np.zeros(100/len(filename_arrays))
-        for i in range(len(vector_distancia)):
-            vector_distancia[i] = 100/len(filename_arrays)*(i+1)
+    
 
-        for x in filename_arrays:
-            data_cyc = pd.read_csv(x, delimiter=",") 
-            
-            print(data)
+    for x in filename_arrays:
+        data_cyc = pd.read_csv(x, delimiter=",") 
 
-            data = data.replace(',','.', regex=True)
+        data_cyc = data_cyc.replace(',','.', regex=True)
 
-            ## SEÑALES DE CORRIENTE Y TENSIÓN#
+        ## SEÑALES DE CORRIENTE Y TENSIÓN#
 
-            # Vector de tiempos
-            time_vector_cyc = data_cyc.iloc[:,0].astype(float).to_numpy()
+        # Vector de tiempos
+        time_vector_cyc = data_cyc.iloc[:,0].astype(float).to_numpy()
 
-            # Señales de tensión/corriente
-            current_deltaA_cyc = data_cyc.iloc[:, 4].astype(float).to_numpy()
-            voltage_deltaA_cyc = data_cyc.iloc[ :,1].astype(float).to_numpy()
+        # Señales de tensión/corriente
+        current_deltaA_cyc = data_cyc.iloc[:, 4].astype(float).to_numpy()
+        voltage_deltaA_cyc = data_cyc.iloc[ :,1].astype(float).to_numpy()
 
-            current_deltaB_cyc = data_cyc.iloc[:, 5].astype(float).to_numpy()
-            voltage_deltaB_cyc =data_cyc.iloc[ :,2].astype(float).to_numpy()
+        current_deltaB_cyc = data_cyc.iloc[:, 5].astype(float).to_numpy()
+        voltage_deltaB_cyc =data_cyc.iloc[ :,2].astype(float).to_numpy()
 
-            current_deltaC_cyc = data_cyc.iloc[:, 6].astype(float).to_numpy()
-            voltage_deltaC_cyc =data_cyc.iloc[ :,3].astype(float).to_numpy()
+        current_deltaC_cyc = data_cyc.iloc[:, 6].astype(float).to_numpy()
+        voltage_deltaC_cyc =data_cyc.iloc[ :,3].astype(float).to_numpy()
 
-            # Transformada de PARK
-            contador_cyc = len(time_vector_cyc)
+        # Transformada de PARK
+        contador_cyc = len(time_vector_cyc)
 
-            Ad_k_vector_cyc = np.zeros((contador_cyc))
-            Aq_k_vector_cyc = np.zeros((contador_cyc))
-            A0_k_vector_cyc = np.zeros((contador_cyc))
+        Ad_k_vector_cyc = np.zeros((contador_cyc))
+        Aq_k_vector_cyc = np.zeros((contador_cyc))
+        A0_k_vector_cyc = np.zeros((contador_cyc))
 
-            Vd_k_vector_cyc = np.zeros((contador_cyc))
-            Vq_k_vector_cyc = np.zeros((contador_cyc))
-            V0_k_vector_cyc = np.zeros((contador_cyc))
-            
-            theta_cyc = 0
-
-            for i in range(contador):
-
-                Aabc_k_cyc = np.array([[current_deltaA_cyc[i]], [current_deltaB_cyc[i]], [current_deltaC_cyc[i]]])
-                Vabc_k_cyc = np.array([[voltage_deltaA_cyc[i]], [voltage_deltaB_cyc[i]], [voltage_deltaC_cyc[i]]])
-                
-                phi_cyc = i*delta_t*2*np.pi*60 + theta_cyc
-
-                T_dq0_cyc = (2/3) * np.array([[np.cos(phi_cyc),np.cos(phi_cyc-(2/3)*np.pi), np.cos(phi_cyc+(2/3)*np.pi)],[-np.sin(phi_cyc),-np.sin(phi_cyc-(2/3)*np.pi), -np.sin(phi_cyc+(2/3)*np.pi)],[0.5, 0.5,0.5]])
+        Vd_k_vector_cyc = np.zeros((contador_cyc))
+        Vq_k_vector_cyc = np.zeros((contador_cyc))
+        V0_k_vector_cyc = np.zeros((contador_cyc))
         
-                Adq0_k_cyc = np.dot(T_dq0_cyc, Aabc_k_cyc)
-                Vdq0_k_cyc = np.dot(T_dq0_cyc, Vabc_k_cyc)
+        theta_cyc = 0
 
-                Ad_k_cyc = Adq0_k_cyc[0]
-                Aq_k_cyc = Adq0_k_cyc[1]
-                A0_k_cyc = Adq0_k_cyc[2]
+        for i in range(contador_cyc):
 
-
-                Vd_k_cyc = Vdq0_k_cyc[0]
-                Vq_k_cyc = Vdq0_k_cyc[1]
-                V0_k_cyc = Vdq0_k_cyc[2]
-
-                Ad_k_vector_cyc[i] = Ad_k_cyc
-                Aq_k_vector_cyc[i] = Aq_k_cyc
-                A0_k_vector_cyc[i] = A0_k_cyc
-
-                Vd_k_vector_cyc[i] = Vd_k_cyc
-                Vq_k_vector_cyc[i] = Vq_k_cyc
-                V0_k_vector_cyc[i] = V0_k_cyc
-
-            # Ondas Viajeras
-            S_forward_cyc = -Vd_k_vector_cyc + Zc*Ad_k_vector_cyc
-            S_backward_cyc = Vd_k_vector_cyc + Zc*Ad_k_vector_cyc
-
-            #Filtro
-            tau = 1.56e06
-            w = 20e03/tau
-            b1, a1 = signal.butter(3, w, 'high')
-            S_f_cyc = signal.filtfilt(b1, a1, S_forward_cyc,axis=0)
-
-            b2, a2 = signal.butter(3, w, 'high')
-            S_b_cyc = signal.filtfilt(b2, a2, S_backward_cyc,axis=0)
-
-            #Correlacion
-
-            corr_cyc = np.correlate(S_b_cyc,S_f_cyc,mode="same")/contador
-            peaks_cyc, _ = find_peaks(corr_cyc)
-
-            taus_cyc = np.zeros(len(peaks_cyc))
-            for i in range(0,len(peaks_cyc)):
-                taus_cyc[i] = corr_cyc[peaks_cyc[i]]
-
-
-            max_taus_cyc = heapq.nlargest(2, taus_cyc)
-        
-            tau_1_cyc = np.argwhere(taus_cyc == max_taus_cyc[0]).astype(int)
-            tau_2_cyc = np.argwhere(taus_cyc== max_taus_cyc[1]).astype(int)
-            # tau_f = np.argmax(corr)
-
-            d = ((velprop*(np.abs(time_vector_cyc[peaks_cyc[tau_1_cyc]]-time_vector_cyc[peaks_cyc[tau_2_cyc]])))/(2))
-            d = round(d[0,0],4)
-            print(d)
-
-            error = ((((vector_distancia[count])/100)*line_distance - d)/((vector_distancia[count])/100)*line_distance)*100
-
-            error_array = np.zeros(len(filename_arrays))
+            Aabc_k_cyc = np.array([[current_deltaA_cyc[i]], [current_deltaB_cyc[i]], [current_deltaC_cyc[i]]])
+            Vabc_k_cyc = np.array([[voltage_deltaA_cyc[i]], [voltage_deltaB_cyc[i]], [voltage_deltaC_cyc[i]]])
             
-            for i in range (len(error_array)):
-                error_array[i] = error
+            phi_cyc = i*delta_t*2*np.pi*60 + theta_cyc
 
-            count = count + 1
+            T_dq0_cyc = (2/3) * np.array([[np.cos(phi_cyc),np.cos(phi_cyc-(2/3)*np.pi), np.cos(phi_cyc+(2/3)*np.pi)],[-np.sin(phi_cyc),-np.sin(phi_cyc-(2/3)*np.pi), -np.sin(phi_cyc+(2/3)*np.pi)],[0.5, 0.5,0.5]])
+    
+            Adq0_k_cyc = np.dot(T_dq0_cyc, Aabc_k_cyc)
+            Vdq0_k_cyc = np.dot(T_dq0_cyc, Vabc_k_cyc)
+
+            Ad_k_cyc = Adq0_k_cyc[0]
+            Aq_k_cyc = Adq0_k_cyc[1]
+            A0_k_cyc = Adq0_k_cyc[2]
+
+
+            Vd_k_cyc = Vdq0_k_cyc[0]
+            Vq_k_cyc = Vdq0_k_cyc[1]
+            V0_k_cyc = Vdq0_k_cyc[2]
+
+            Ad_k_vector_cyc[i] = Ad_k_cyc
+            Aq_k_vector_cyc[i] = Aq_k_cyc
+            A0_k_vector_cyc[i] = A0_k_cyc
+
+            Vd_k_vector_cyc[i] = Vd_k_cyc
+            Vq_k_vector_cyc[i] = Vq_k_cyc
+            V0_k_vector_cyc[i] = V0_k_cyc
+
+        # Ondas Viajeras
+        S_forward_cyc = -Vd_k_vector_cyc + Zc*Ad_k_vector_cyc
+        S_backward_cyc = Vd_k_vector_cyc + Zc*Ad_k_vector_cyc
+
+        #Filtro
+        tau = 1.56e06
+        w = 20e03/tau
+        b1, a1 = signal.butter(3, w, 'high')
+        S_f_cyc = signal.filtfilt(b1, a1, S_forward_cyc,axis=0)
+
+        b2, a2 = signal.butter(3, w, 'high')
+        S_b_cyc = signal.filtfilt(b2, a2, S_backward_cyc,axis=0)
+
+        #Correlacion
+
+        corr_cyc = np.correlate(S_b_cyc,S_f_cyc,mode="same")/contador_cyc
+        peaks_cyc, _ = find_peaks(corr_cyc)
+
+        taus_cyc = np.zeros(len(peaks_cyc))
+        for i in range(0,len(peaks_cyc)):
+            taus_cyc[i] = corr_cyc[peaks_cyc[i]]
+
+
+        max_taus_cyc = heapq.nlargest(2, taus_cyc)
+    
+        tau_1_cyc = np.argwhere(taus_cyc == max_taus_cyc[0]).astype(int)
+        tau_2_cyc = np.argwhere(taus_cyc== max_taus_cyc[1]).astype(int)
+        # tau_f = np.argmax(corr)
+
+        d = ((velprop*(np.abs(time_vector_cyc[peaks_cyc[tau_1_cyc]]-time_vector_cyc[peaks_cyc[tau_2_cyc]])))/(2))
+        d = round(d[0,0],4)
+        print(d)
+
+        error = ((np.abs(((vector_distancia[count])/100)*line_distance - d))/(((vector_distancia[count])/100)*line_distance))*100
+        error_array[count] = error
+    
+        count = count + 1
+
+    print(vector_distancia)
+    print(error_array)
+
 
             
 
@@ -337,9 +346,17 @@ def VarReading():
     Zc = 369.498
 
 def VarReading2():
-    global line_distance, error 
+    global line_distance, error,delta_t,Zc,velprop
 
     line_distance = float(entry4.get())
+
+    delta_t = 0.641E-6
+    # velprop = float(entry2.get())
+    velprop = 2.92051e05
+    # Zc = float(entry3.get())
+    Zc = 369.498
+
+    print(delta_t)
 
     
     
@@ -375,22 +392,25 @@ widg2.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 # widg3.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
 def Graph2():
-        global vector_distancia, error_array
-        canvas2.get_tk_widget().pack_forget()
-    
-        fig2 = plt.figure(1,figsize=(6,4))
-        canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
-        widg = canvas.get_tk_widget()
-        widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
-        canvas.draw()
+    global vector_distancia, error_array, canvas2
+    canvas2.get_tk_widget().pack_forget()
 
-        plot1 = fig2.add_subplot(1,1,1)
-    
-        plot1.plot(vector_distancia, error_array, 'r')
-        plot1.legend(labels=['Validación de fallas'],loc='lower left')
-        plot1.title.set_text("Validación de fallas")
-        plot1.set_xlabel('Distancia de la falla (%)')
-        plot1.set_ylabel('Error de estimación(%)')
+    print(vector_distancia)
+    print(error_array)
+
+    fig2 = plt.figure(2,figsize=(6,4))
+    canvas2 = FigureCanvasTkAgg(fig2, master=tab2)  # A tk.DrawingArea.
+    widg2 = canvas2.get_tk_widget()
+    widg2.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+    canvas2.draw()
+
+    plot1 = fig2.add_subplot(1,1,1)
+
+    plot1.plot(vector_distancia, error_array, 'r')
+    plot1.legend(labels=['Validación de fallas'],loc='lower left')
+    plot1.title.set_text("Validación de fallas")
+    plot1.set_xlabel('Distancia de la falla (%)')
+    plot1.set_ylabel('Error de estimación(%)')
 
     
 
@@ -528,7 +548,7 @@ def Graph():
 buttongraph = tkinter.Button(tab1, text='Realizar Gráfica', command=Graph)
 buttongraph.place(x = 1125, y = 110)
 
-buttongraph2 = tkinter.Button(tab2, text='Realizar Gráfica', command=Graph2)
+buttongraph2 = tkinter.Button(tab2, text='Realizar Gráfica', command=lambda:[VarReading2(),FaultLoc2(),Graph2()])
 buttongraph2.place(x = 1125, y = 110)
 
 
