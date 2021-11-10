@@ -10,11 +10,13 @@ import tkinter
 from tkinter import StringVar, filedialog, Canvas, ttk
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
+import matplotlib.backends.backend_tkagg as tkagg
 # Implement the default Matplotlib key bindings.
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 from scipy.signal import find_peaks
 import heapq
+from scipy.signal import argrelextrema
 from PIL import ImageTk, Image
 
 import csv
@@ -67,14 +69,14 @@ def FaultLoc():
 
     data = pd.read_csv(filename, delimiter=",") 
 
-    print(data)
-
     data = data.replace(',','.', regex=True)
+
+    print(data)
 
     ## SEÑALES DE CORRIENTE Y TENSIÓN#
 
     # Vector de tiempos
-    time_vector = data.iloc[:,0].astype(float).to_numpy()
+    time_vector = data.iloc[2:,0].astype(float).to_numpy()
 
     # Señales de tensión/corriente
     current_deltaA = data.iloc[:, 4].astype(float).to_numpy()
@@ -128,40 +130,44 @@ def FaultLoc():
         Vq_k_vector[i] = Vq_k
         V0_k_vector[i] = V0_k
 
-        # Ondas Viajeras
-        S_forward = -Vd_k_vector + Zc*Ad_k_vector
-        S_backward = Vd_k_vector + Zc*Ad_k_vector
+    # Ondas Viajeras
+    S_forward = -Vd_k_vector + Zc*Ad_k_vector
+    S_backward = Vd_k_vector + Zc*Ad_k_vector
 
-        #Filtro
-        tau = 1.56e06
-        w = 20e03/tau
-        b1, a1 = signal.butter(3, w, 'high')
-        S_f = signal.filtfilt(b1, a1, S_forward,axis=0)
+    #Filtro
+    tau = 1.56e06
+    w = 20e03/tau
+    b1, a1 = signal.butter(3, w, 'high')
+    S_f = signal.filtfilt(b1, a1, S_forward,axis=0)
 
-        b2, a2 = signal.butter(3, w, 'high')
-        S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
+    b2, a2 = signal.butter(3, w, 'high')
+    S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
 
-        #Correlacion
+    #Correlacion
 
-        corr = np.correlate(S_b,S_f,mode="same")/contador
-        peaks, _ = find_peaks(corr)
+    corr = np.correlate(S_b,S_f,mode="same")/contador
+    peaks, _ = find_peaks(corr)
 
-        taus = np.zeros(len(peaks))
-        for i in range(0,len(peaks)):
-            taus[i] = corr[peaks[i]]
+    taus = np.zeros(len(peaks))
+    for i in range(0,len(peaks)):
+        taus[i] = corr[peaks[i]]
 
-        print(taus)
+    max_taus = heapq.nlargest(2, taus)
 
-        max_taus = heapq.nlargest(2, taus)
+    tau_1 = np.argwhere(taus == max_taus[0]).astype(int)
+    tau_2 = np.argwhere(taus == max_taus[1]).astype(int)
 
-        tau_1 = np.argwhere(taus == max_taus[0]).astype(int)
-        tau_2 = np.argwhere(taus== max_taus[1]).astype(int)
-        # tau_f = np.argmax(corr)
+    print(time_vector[peaks[tau_1]])
+    print(time_vector[peaks[tau_2]])
 
-        d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
-        d = round(d[0,0],4)
-        print(d)
-        labelText.set(d)
+    d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
+    d = round(d[0,0],4)
+
+    print (d)
+  
+    
+
+    labelText.set(d)
 
 # error = (np.abs(faultdistance-d)/(faultdistance))*100
 # error = round(error,4)
@@ -268,7 +274,7 @@ def FaultLoc2():
 
         taus_cyc = np.zeros(len(peaks_cyc))
         for i in range(0,len(peaks_cyc)):
-            taus_cyc[i] = corr_cyc[peaks_cyc[i]]
+            taus_cyc[i] = np.abs(corr_cyc[peaks_cyc[i]])
 
 
         max_taus_cyc = heapq.nlargest(2, taus_cyc)
@@ -288,16 +294,6 @@ def FaultLoc2():
 
     print(vector_distancia)
     print(error_array)
-
-
-            
-
-            
-
-
-
-            
-
 
 win.geometry("1280x720")
 win.title("Aplicación para localización de fallas - PF202130")
@@ -375,7 +371,6 @@ combo.place(x = 1100, y = 140)
 
 
 
-
 fig1 = plt.figure(1,figsize=(6,4))
 canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
 widg = canvas.get_tk_widget()
@@ -404,6 +399,9 @@ def Graph2():
     widg2.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
     canvas2.draw()
 
+    toolbar2 = NavigationToolbar2Tk(canvas2, tab2)
+    toolbar2.update()
+
     plot1 = fig2.add_subplot(1,1,1)
 
     plot1.plot(vector_distancia, error_array, 'r')
@@ -413,6 +411,8 @@ def Graph2():
     plot1.set_ylabel('Error de estimación(%)')
 
     
+def clearCanv():
+    canvas.get_tk_widget().pack_forget()
 
 def Graph():
     value = combo.get()
@@ -434,7 +434,7 @@ def Graph():
 
     if value == "Señales de entrada":
         print(value)
-        canvas.get_tk_widget().pack_forget()
+        # canvas.get_tk_widget().pack_forget()
        
         fig1 = plt.figure(1,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
@@ -442,6 +442,8 @@ def Graph():
         widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
         canvas.draw()
 
+        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar.update()
         
         plot2 = fig1.add_subplot(1,2,1)
         plot1 = fig1.add_subplot(1,2,2)
@@ -472,13 +474,16 @@ def Graph():
     elif value == "Señales transformadas":
         print(value)
     
-        canvas.get_tk_widget().pack_forget()
+        # canvas.get_tk_widget().pack_forget()
 
         fig2 = plt.figure(2,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig2, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
         widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
         canvas.draw()
+
+        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar.update()
 
         
         plot2 = fig2.add_subplot(1,2,1)
@@ -507,13 +512,16 @@ def Graph():
     elif value == "Ondas Viajeras":
         print(value)
         
-        canvas.get_tk_widget().pack_forget()
+        # canvas.get_tk_widget().pack_forget()
 
         fig3 = plt.figure(3,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig3, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
         widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
         canvas.draw()
+
+        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar.update()
 
         plot1 = fig3.add_subplot(111)
         plot1.plot(time_vector,S_f)
@@ -527,7 +535,7 @@ def Graph():
     elif value == "Correlación":
         print(value)
         
-        canvas.get_tk_widget().pack_forget()
+        # canvas.get_tk_widget().pack_forget()
 
         fig4 = plt.figure(4,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig4, master=tab1)  # A tk.DrawingArea.
@@ -535,17 +543,21 @@ def Graph():
         widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
         canvas.draw()
 
+        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar.update()
+
         plot1 = fig4.add_subplot(111)
-        plot1.plot(time_vector[0:round(len(time_vector)/2)],corr[0:round(len(corr)/2)])
-        plot1.scatter(time_vector[peaks[tau_1]],max_taus[0])
-        plot1.scatter(time_vector[peaks[tau_2]],max_taus[1])
-        plot1.invert_xaxis()
+        plot1.plot(corr[0:round(len(corr))])
+        plot1.scatter(peaks[tau_1],max_taus[0],c="red")
+        plot1.scatter(peaks[tau_2],max_taus[1],c="black")
+        # plot1.invert_xaxis()
         plot1.legend(labels=['Correlación cruzada','Punto máximo #1', 'Punto máximo #2'],loc='lower right')
         plot1.title.set_text("Correlación cruzada")
         plot1.set_xlabel('Tiempo (s)')
         plot1.set_ylabel('Puntos de correlación')
 
-buttongraph = tkinter.Button(tab1, text='Realizar Gráfica', command=Graph)
+
+buttongraph = tkinter.Button(tab1, text='Realizar Gráfica', command=lambda:[clearCanv(),Graph()])
 buttongraph.place(x = 1125, y = 110)
 
 buttongraph2 = tkinter.Button(tab2, text='Realizar Gráfica', command=lambda:[VarReading2(),FaultLoc2(),Graph2()])
