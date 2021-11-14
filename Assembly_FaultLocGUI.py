@@ -18,6 +18,7 @@ from scipy.signal import find_peaks
 import heapq
 from scipy.signal import argrelextrema
 from PIL import ImageTk, Image
+from modwt import modwt
 
 import csv
 global filename
@@ -76,7 +77,7 @@ def FaultLoc():
     ## SEÑALES DE CORRIENTE Y TENSIÓN#
 
     # Vector de tiempos
-    time_vector = data.iloc[2:,0].astype(float).to_numpy()
+    time_vector = data.iloc[:,0].astype(float).to_numpy()
 
     # Señales de tensión/corriente
     current_deltaA = data.iloc[:, 4].astype(float).to_numpy()
@@ -130,9 +131,18 @@ def FaultLoc():
         Vq_k_vector[i] = Vq_k
         V0_k_vector[i] = V0_k
 
+    #MODWT 
+    wt = modwt(Ad_k_vector, 'db4', 4)
+    wt_A = wt[3,:]
+    wt = modwt(Vd_k_vector, 'db4', 4)
+    wt_V = wt[3,:]
+
     # Ondas Viajeras
     S_forward = -Vd_k_vector + Zc*Ad_k_vector
     S_backward = Vd_k_vector + Zc*Ad_k_vector
+
+    S_forward_modwt = -wt_V + Zc*wt_A
+    S_backward_modwt = wt_V + Zc*wt_A
 
     #Filtro
     tau = 1.56e06
@@ -143,30 +153,53 @@ def FaultLoc():
     b2, a2 = signal.butter(3, w, 'high')
     S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
 
+    b1, a1 = signal.butter(3, w, 'high')
+    S_f_modwt = signal.filtfilt(b1, a1, S_forward_modwt,axis=0)
+
+    b2, a2 = signal.butter(3, w, 'high')
+    S_b_modwt = signal.filtfilt(b2, a2, S_backward_modwt,axis=0)
+
     #Correlacion
 
     corr = np.correlate(S_b,S_f,mode="same")/contador
+    corr2 = np.correlate(S_backward_modwt, S_forward_modwt,mode="same")/contador
     peaks, _ = find_peaks(corr)
+    peaks2, _ = find_peaks(corr2)
 
     taus = np.zeros(len(peaks))
+    taus2 = np.zeros(len(peaks2))
     for i in range(0,len(peaks)):
         taus[i] = corr[peaks[i]]
+        
+    for i in range(0,len(peaks2)):
+        taus2[i] = corr2[peaks2[i]]
 
+    # MAXIMOS CORRELACION CONVENCIONAL
     max_taus = heapq.nlargest(2, taus)
 
     tau_1 = np.argwhere(taus == max_taus[0]).astype(int)
     tau_2 = np.argwhere(taus == max_taus[1]).astype(int)
 
+    # MAXIMOS MODWT
+    max_taus2 = heapq.nlargest(2, taus2)
+
+    tau_11 = np.argwhere(taus2 == max_taus2[0]).astype(int)
+    tau_22 = np.argwhere(taus2 == max_taus2[1]).astype(int)
+
     print(time_vector[peaks[tau_1]])
     print(time_vector[peaks[tau_2]])
 
+    #DISTANCIA CORRELACION CONVENCIONAL
     d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
-    d = round(d[0,0],4)
+    d = d[0,0]
+
+    #DISTANCIA MODWT
+    d2 = ((velprop*(np.abs(time_vector[peaks2[tau_11]]-time_vector[peaks2[tau_22]])))/(2))
+    d2 = d2[0,0]
 
     print (d)
+    print(d2)
   
-    
-
     labelText.set(d)
 
 # error = (np.abs(faultdistance-d)/(faultdistance))*100
