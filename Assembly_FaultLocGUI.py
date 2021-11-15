@@ -27,7 +27,7 @@ global delta_t
 global velprop
 global Zc
 global faultdistance
-global combo
+global combo,combo2,combo22,combo3
 global canvas, canvas2
 
 
@@ -65,8 +65,8 @@ def FaultLoc():
     global voltage_deltaA, voltage_deltaB, voltage_deltaC
     global Vd_k_vector, Vq_k_vector,V0_k_vector
     global Ad_k_vector, Aq_k_vector, A0_k_vector
-    global S_b, S_f
-    global corr,peaks,tau_1,tau_2,max_taus
+    global S_b, S_f,S_backward_modwt,S_forward_modwt
+    global corr,peaks,tau_1,tau_2,max_taus,corr2,peaks2,tau_11,tau_22,max_taus2
 
     data = pd.read_csv(filename, delimiter=",") 
 
@@ -153,12 +153,6 @@ def FaultLoc():
     b2, a2 = signal.butter(3, w, 'high')
     S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
 
-    b1, a1 = signal.butter(3, w, 'high')
-    S_f_modwt = signal.filtfilt(b1, a1, S_forward_modwt,axis=0)
-
-    b2, a2 = signal.butter(3, w, 'high')
-    S_b_modwt = signal.filtfilt(b2, a2, S_backward_modwt,axis=0)
-
     #Correlacion
 
     corr = np.correlate(S_b,S_f,mode="same")/contador
@@ -197,10 +191,20 @@ def FaultLoc():
     d2 = ((velprop*(np.abs(time_vector[peaks2[tau_11]]-time_vector[peaks2[tau_22]])))/(2))
     d2 = d2[0,0]
 
+    d2 = str(d2) + ' ' + 'KM'
+    d = str(d) + ' ' + 'KM'
     print (d)
     print(d2)
-  
+    
+    # value_d = combo2.get()
+    # if (value_d == "Correlación convencional"):
+    #     labelText.set(d)
+    # elif(value_d == "MODWT"):
+    #     labelText.set(d2)
+
     labelText.set(d)
+
+    
 
 # error = (np.abs(faultdistance-d)/(faultdistance))*100
 # error = round(error,4)
@@ -212,7 +216,7 @@ def FaultLoc2():
     global filename_arrays
     global delta_t, Zc,velprop
     global error_array,vector_distancia
-
+    value_met = combo22.get()
     calculo = int(100/(len(filename_arrays)))
     print('calculo')
     print(calculo)
@@ -224,7 +228,7 @@ def FaultLoc2():
     error_array = np.zeros(len(filename_arrays))
 
     
-
+    
     for x in filename_arrays:
         data_cyc = pd.read_csv(x, delimiter=",") 
 
@@ -287,39 +291,72 @@ def FaultLoc2():
             Vq_k_vector_cyc[i] = Vq_k_cyc
             V0_k_vector_cyc[i] = V0_k_cyc
 
+
+        #MODWT 
+        wt_cyc = modwt(Ad_k_vector_cyc, 'db4', 4)
+        wt_A_cyc = wt_cyc[3,:]
+        wt_cyc = modwt(Vd_k_vector_cyc, 'db4', 4)
+        wt_V_cyc = wt_cyc[3,:]
+
         # Ondas Viajeras
         S_forward_cyc = -Vd_k_vector_cyc + Zc*Ad_k_vector_cyc
         S_backward_cyc = Vd_k_vector_cyc + Zc*Ad_k_vector_cyc
+
+        S_f_cyc_2 = -wt_V_cyc + Zc*wt_A_cyc
+        S_b_cyc_2 = wt_V_cyc + Zc*wt_A_cyc
 
         #Filtro
         tau = 1.56e06
         w = 20e03/tau
         b1, a1 = signal.butter(3, w, 'high')
         S_f_cyc = signal.filtfilt(b1, a1, S_forward_cyc,axis=0)
+        S_f_cyc_2 = signal.filtfilt(b1, a1, S_f_cyc_2,axis=0)
 
         b2, a2 = signal.butter(3, w, 'high')
         S_b_cyc = signal.filtfilt(b2, a2, S_backward_cyc,axis=0)
+        S_b_cyc_2 = signal.filtfilt(b2, a2, S_b_cyc_2,axis=0)
 
         #Correlacion
 
         corr_cyc = np.correlate(S_b_cyc,S_f_cyc,mode="same")/contador_cyc
         peaks_cyc, _ = find_peaks(corr_cyc)
 
+        corr_cyc_2 = np.correlate(S_b_cyc_2,S_f_cyc_2,mode="same")/contador_cyc
+        peaks_cyc_2, _ = find_peaks(corr_cyc_2)
+
         taus_cyc = np.zeros(len(peaks_cyc))
         for i in range(0,len(peaks_cyc)):
             taus_cyc[i] = np.abs(corr_cyc[peaks_cyc[i]])
+
+        taus_cyc_2 = np.zeros(len(peaks_cyc))
+        for i in range(0,len(peaks_cyc)):
+            taus_cyc_2[i] = np.abs(corr_cyc_2[peaks_cyc_2[i]])
 
 
         max_taus_cyc = heapq.nlargest(2, taus_cyc)
     
         tau_1_cyc = np.argwhere(taus_cyc == max_taus_cyc[0]).astype(int)
         tau_2_cyc = np.argwhere(taus_cyc== max_taus_cyc[1]).astype(int)
+
+        max_taus_cyc_2 = heapq.nlargest(2, taus_cyc_2)
+    
+        tau_1_cyc_2 = np.argwhere(taus_cyc_2 == max_taus_cyc_2[0]).astype(int)
+        tau_2_cyc_2 = np.argwhere(taus_cyc_2== max_taus_cyc_2[1]).astype(int)
         # tau_f = np.argmax(corr)
 
         d = ((velprop*(np.abs(time_vector_cyc[peaks_cyc[tau_1_cyc]]-time_vector_cyc[peaks_cyc[tau_2_cyc]])))/(2))
         d = round(d[0,0],4)
         print(d)
 
+        # d2 = ((velprop*(np.abs(time_vector_cyc[peaks_cyc_2[tau_1_cyc_2]]-time_vector_cyc[peaks_cyc_2[tau_2_cyc_2]])))/(2))
+        # d2 = round(d2[0,0],4)
+        # print(d2)
+
+        # if (value_met == "Correlación convencional"):
+        #     d = d
+        # elif (value_met == "MODWT"):
+        #     d = d2
+        
         error = ((np.abs(((vector_distancia[count])/100)*line_distance - d))/(((vector_distancia[count])/100)*line_distance))*100
         error_array[count] = error
     
@@ -335,13 +372,14 @@ win.title("Aplicación para localización de fallas - PF202130")
 label1 = tkinter.Label(tab1,text = "Ingrese el valor de la frecuencia de muestreo:").place(x = 20, y = 50)  
 label2 = tkinter.Label(tab1,text = "Ingrese el valor de la velocidad de propagación:").place(x = 20, y = 80) 
 label3 = tkinter.Label(tab1,text = "Ingrese el valor de la impedancia característica:").place(x = 20, y = 110) 
+# label4 = tkinter.Label(tab1,text = "Seleccione método de cálculo:").place(x = 20, y = 140) 
 label5 = tkinter.Label(tab1,text = "Programa para la localización de fallas utilizando ondas viajeras", font=('Helvetica', 18, 'bold')).place(x = 360, y = 10)  
 
 labelText = tkinter.StringVar()
 labelText2 = tkinter.StringVar()
 
-label_d1 = tkinter.Label(tab1,text = "La distancia de la falla calculada es:", fg = "black", font =('Helvetica', 12)).place(x = 500, y = 50 )
-label_d2 = tkinter.Label(tab1,textvariable= labelText, fg = "green", font =('Helvetica', 12, 'bold')).place(x = 755, y = 50 )
+label_d1 = tkinter.Label(tab1,text = "La distancia de la falla calculada es...", fg = "black", font =('Helvetica', 12)).place(x = 550, y = 50 )
+label_d2 = tkinter.Label(tab1,textvariable= labelText, fg = "green", font =('Helvetica', 30, 'bold')).place(x = 550, y = 100 )
 
 # img = ImageTk.PhotoImage(Image.open("FaultLocApp.png"))
 # panel = tkinter.Label(tab1, image = img).place(x = 500, y = 10) 
@@ -355,10 +393,11 @@ entry2.place(x = 280, y = 80)
 entry3 = tkinter.Entry(tab1)
 entry3.place(x = 280, y = 110)
 
-label1 = tkinter.Label(tab2,text = "Ingrese el valor de la distancia de la linea:").place(x = 20, y = 50)  
+label1 = tkinter.Label(tab2,text = "Ingrese la distancia de la línea (en km):").place(x = 20, y = 50)  
 entry4 = tkinter.Entry(tab2)
 entry4.place(x = 280, y = 50)
 
+# label6 = tkinter.Label(tab2,text = "Seleccione método de cálculo:").place(x = 20, y = 80) 
 
 def VarReading():
     global delta_t
@@ -391,8 +430,8 @@ def VarReading2():
     
 button = tkinter.Button(tab1, text='Abrir archivo .csv', command=UploadAction)
 button.place(x = 1120, y = 50)
-button = tkinter.Button(tab2, text='Abrir grupo de archivos .csv', command=UploadAction2)
-button.place(x = 1120, y = 50)
+button = tkinter.Button(tab2, text='Abrir archivos .csv', command=UploadAction2)
+button.place(x = 1000, y = 50)
 buttonrun = tkinter.Button(tab1, text='Ejecutar Script', command=lambda:[VarReading(), FaultLoc()])
 buttonrun.place(x = 1130, y = 80)
 
@@ -402,17 +441,29 @@ combo = ttk.Combobox(tab1,values=["Señales de entrada", "Señales transformadas
 combo.set("Seleccione la gráfica...")
 combo.place(x = 1100, y = 140)
 
+# widget_var2 = tkinter.StringVar()
+# combo2 = ttk.Combobox(tab1,values=["Correlación convencional", "MODWT"])
+# combo2.set("Seleccione método...")
+# combo2.place(x = 280, y = 140)
+
+# widget_var22 = tkinter.StringVar()
+# combo22 = ttk.Combobox(tab2,values=["Correlación convencional", "MODWT"])
+# combo22.set("Seleccione método...")
+# combo22.place(x = 280, y = 80)
+
 
 
 fig1 = plt.figure(1,figsize=(6,4))
 canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
 widg = canvas.get_tk_widget()
-widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+# widg.pack(padx=50, pady=170)
+widg.place(x=80,y=170,height=500,width=1080)
     
 fig2 = plt.figure(2,figsize=(6,4))
 canvas2 = FigureCanvasTkAgg(fig2, master=tab2)  # A tk.DrawingArea.
 widg2 = canvas2.get_tk_widget()
-widg2.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+# widg2.pack(padx=50, pady=170)
+widg2.place(x=80,y=140,height=500,width=1080)
 
 # fig3 = plt.figure(3,figsize=(6,4))
 # canvas3 = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
@@ -421,7 +472,6 @@ widg2.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
 def Graph2():
     global vector_distancia, error_array, canvas2
-    canvas2.get_tk_widget().pack_forget()
 
     print(vector_distancia)
     print(error_array)
@@ -429,26 +479,33 @@ def Graph2():
     fig2 = plt.figure(2,figsize=(6,4))
     canvas2 = FigureCanvasTkAgg(fig2, master=tab2)  # A tk.DrawingArea.
     widg2 = canvas2.get_tk_widget()
-    widg2.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+    # widg2.pack(padx=50, pady=170)
+    widg2.place(x=80,y=140,height=500,width=1080)
     canvas2.draw()
 
-    toolbar2 = NavigationToolbar2Tk(canvas2, tab2)
+    toolbar2 = NavigationToolbar2Tk(canvas2, tab2, pack_toolbar=False)
     toolbar2.update()
 
-    plot1 = fig2.add_subplot(1,1,1)
+    plt.clf()
+    plot3 = fig2.add_subplot(1,1,1)
 
-    plot1.plot(vector_distancia, error_array, 'r')
-    plot1.legend(labels=['Validación de fallas'],loc='lower left')
-    plot1.title.set_text("Validación de fallas")
-    plot1.set_xlabel('Distancia de la falla (%)')
-    plot1.set_ylabel('Error de estimación(%)')
+    plot3.plot(vector_distancia, error_array, 'r')
+    plot3.legend(labels=['Validación de fallas'],loc='lower left')
+    plot3.title.set_text("Validación de fallas")
+    plot3.set_xlabel('Distancia de la falla (%)')
+    plot3.set_ylabel('Error de estimación(%)')
 
     
 def clearCanv():
-    canvas.get_tk_widget().pack_forget()
+    for item in canvas.get_tk_widget().find_all():
+       canvas.get_tk_widget().delete(item)
+
+    for item in canvas2.get_tk_widget().find_all():
+       canvas2.get_tk_widget().delete(item)
 
 def Graph():
     value = combo.get()
+    value2 = combo2.get()
    
     global canvas
     global Vd_k_vector, Vq_k_vector,V0_k_vector
@@ -472,12 +529,15 @@ def Graph():
         fig1 = plt.figure(1,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
-        widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+        # widg.pack(padx=50, pady=170)
+        widg.place(x=80,y=170,height=500,width=1080)
         canvas.draw()
 
-        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
         toolbar.update()
         
+        plt.clf()
+
         plot2 = fig1.add_subplot(1,2,1)
         plot1 = fig1.add_subplot(1,2,2)
     
@@ -512,13 +572,15 @@ def Graph():
         fig2 = plt.figure(2,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig2, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
-        widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+        # widg.pack(padx=50, pady=170)
+        widg.place(x=80,y=170,height=500,width=1080)
         canvas.draw()
 
-        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
         toolbar.update()
 
-        
+        plt.clf()
+
         plot2 = fig2.add_subplot(1,2,1)
         plot1 = fig2.add_subplot(1,2,2)
         plot1.plot(time_vector,Ad_k_vector, 'r')
@@ -550,19 +612,32 @@ def Graph():
         fig3 = plt.figure(3,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig3, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
-        widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+        # widg.pack(padx=50, pady=170)
+        widg.place(x=80,y=170,height=500,width=1080)
         canvas.draw()
 
-        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
         toolbar.update()
 
-        plot1 = fig3.add_subplot(111)
-        plot1.plot(time_vector,S_f)
-        plot1.plot(time_vector,S_b)
-        plot1.legend(labels=['Onda de ida', 'Onda de llegada'],loc='lower left')
-        plot1.title.set_text("Ondas viajeras")
-        plot1.set_xlabel('Tiempo (s)')
-        plot1.set_ylabel('Voltaje (V)')
+        plt.clf()
+
+        if (value2 == 'Correlación convencional'):
+            plot1 = fig3.add_subplot(111)
+            plot1.plot(time_vector,S_f)
+            plot1.plot(time_vector,S_b)
+            plot1.legend(labels=['Onda de ida', 'Onda de llegada'],loc='lower left')
+            plot1.title.set_text("Ondas viajeras - Correlación convencional")
+            plot1.set_xlabel('Tiempo (s)')
+            plot1.set_ylabel('Voltaje (V)')
+        
+        elif(value2 == 'MODWT'):
+            plot1 = fig3.add_subplot(111)
+            plot1.plot(time_vector,S_forward_modwt)
+            plot1.plot(time_vector,S_backward_modwt)
+            plot1.legend(labels=['Onda de ida', 'Onda de llegada'],loc='lower left')
+            plot1.title.set_text("Ondas viajeras - MODWT")
+            plot1.set_xlabel('Tiempo (s)')
+            plot1.set_ylabel('Voltaje (V)')
         
         
     elif value == "Correlación":
@@ -573,31 +648,48 @@ def Graph():
         fig4 = plt.figure(4,figsize=(6,4))
         canvas = FigureCanvasTkAgg(fig4, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
-        widg.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+        # widg.pack(padx=50, pady=170)
+        widg.place(x=80,y=170,height=500,width=1080)
         canvas.draw()
 
-        toolbar = NavigationToolbar2Tk(canvas, tab1)
+        toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
         toolbar.update()
 
-        plot1 = fig4.add_subplot(111)
-        plot1.plot(corr[0:round(len(corr))])
-        plot1.scatter(peaks[tau_1],max_taus[0],c="red")
-        plot1.scatter(peaks[tau_2],max_taus[1],c="black")
-        # plot1.invert_xaxis()
-        plot1.legend(labels=['Correlación cruzada','Punto máximo #1', 'Punto máximo #2'],loc='lower right')
-        plot1.title.set_text("Correlación cruzada")
-        plot1.set_xlabel('Tiempo (s)')
-        plot1.set_ylabel('Puntos de correlación')
+        plt.clf()
+
+        if (value2 == 'Correlación convencional'):
+            plot1 = fig4.add_subplot(111)
+            plot1.plot(corr[0:round(len(corr))])
+            plot1.scatter(peaks[tau_1],max_taus[0],c="red")
+            plot1.scatter(peaks[tau_2],max_taus[1],c="black")
+            # plot1.invert_xaxis()
+            plot1.legend(labels=['Correlación cruzada - Convencional','Punto máximo #1', 'Punto máximo #2'],loc='lower right')
+            plot1.title.set_text("Correlación cruzada - Convencional")
+            plot1.set_xlabel('Número de muestras')
+            plot1.set_ylabel('Puntos de correlación')
+
+        elif(value2 == 'MODWT'):
+            plot1 = fig4.add_subplot(111)
+            plot1.plot(corr2[0:round(len(corr2))])
+            plot1.scatter(peaks2[tau_11],max_taus2[0],c="red")
+            plot1.scatter(peaks2[tau_22],max_taus2[1],c="black")
+            # plot1.invert_xaxis()
+            plot1.legend(labels=['Correlación cruzada - MODWT','Punto máximo #1', 'Punto máximo #2'],loc='lower right')
+            plot1.title.set_text("Correlación cruzada - MODWT")
+            plot1.set_xlabel('Número de muestras')
+            plot1.set_ylabel('Puntos de correlación')
+
 
 
 buttongraph = tkinter.Button(tab1, text='Realizar Gráfica', command=lambda:[clearCanv(),Graph()])
 buttongraph.place(x = 1125, y = 110)
 
-buttongraph2 = tkinter.Button(tab2, text='Realizar Gráfica', command=lambda:[VarReading2(),FaultLoc2(),Graph2()])
-buttongraph2.place(x = 1125, y = 110)
+buttongraph2 = tkinter.Button(tab2, text='Realizar Validación', command=lambda:[VarReading2(),FaultLoc2(),Graph2()])
+buttongraph2.place(x = 1000, y = 80)
 
-
+win.resizable(0,0)
 win.mainloop()
+
 
 
 
