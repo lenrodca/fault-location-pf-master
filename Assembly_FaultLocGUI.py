@@ -149,16 +149,17 @@ def FaultLoc():
     w = 20e03/tau
     b1, a1 = signal.butter(3, w, 'high')
     S_f = signal.filtfilt(b1, a1, S_forward,axis=0)
-
+    S_forward_modwt = signal.filtfilt(b1, a1, S_forward_modwt,axis=0)
     b2, a2 = signal.butter(3, w, 'high')
     S_b = signal.filtfilt(b2, a2, S_backward,axis=0)
+    S_backward_modwt = signal.filtfilt(b2, a2, S_backward_modwt,axis=0)
 
     #Correlacion
 
     corr = np.correlate(S_b,S_f,mode="same")/contador
     corr2 = np.correlate(S_backward_modwt, S_forward_modwt,mode="same")/contador
     peaks, _ = find_peaks(corr)
-    peaks2, _ = find_peaks(corr2)
+    peaks2, _ = find_peaks(corr2,distance=50)
 
     taus = np.zeros(len(peaks))
     taus2 = np.zeros(len(peaks2))
@@ -196,13 +197,11 @@ def FaultLoc():
     print (d)
     print(d2)
     
-    # value_d = combo2.get()
-    # if (value_d == "Correlación convencional"):
-    #     labelText.set(d)
-    # elif(value_d == "MODWT"):
-    #     labelText.set(d2)
-
-    labelText.set(d)
+    value_d = combo2.get()
+    if (value_d == "Correlación convencional"):
+        labelText.set(d)
+    elif(value_d == "MODWT"):
+        labelText.set(d2)
 
     
 
@@ -322,14 +321,14 @@ def FaultLoc2():
         peaks_cyc, _ = find_peaks(corr_cyc)
 
         corr_cyc_2 = np.correlate(S_b_cyc_2,S_f_cyc_2,mode="same")/contador_cyc
-        peaks_cyc_2, _ = find_peaks(corr_cyc_2)
+        peaks_cyc_2, _ = find_peaks(corr_cyc_2,distance=50)
 
         taus_cyc = np.zeros(len(peaks_cyc))
         for i in range(0,len(peaks_cyc)):
             taus_cyc[i] = np.abs(corr_cyc[peaks_cyc[i]])
 
-        taus_cyc_2 = np.zeros(len(peaks_cyc))
-        for i in range(0,len(peaks_cyc)):
+        taus_cyc_2 = np.zeros(len(peaks_cyc_2))
+        for i in range(0,len(peaks_cyc_2)):
             taus_cyc_2[i] = np.abs(corr_cyc_2[peaks_cyc_2[i]])
 
 
@@ -348,14 +347,14 @@ def FaultLoc2():
         d = round(d[0,0],4)
         print(d)
 
-        # d2 = ((velprop*(np.abs(time_vector_cyc[peaks_cyc_2[tau_1_cyc_2]]-time_vector_cyc[peaks_cyc_2[tau_2_cyc_2]])))/(2))
-        # d2 = round(d2[0,0],4)
-        # print(d2)
+        d2 = ((velprop*(np.abs(time_vector_cyc[peaks_cyc_2[tau_1_cyc_2]]-time_vector_cyc[peaks_cyc_2[tau_2_cyc_2]])))/(2))
+        d2 = round(d2[0,0],4)
+        print(d2)
 
-        # if (value_met == "Correlación convencional"):
-        #     d = d
-        # elif (value_met == "MODWT"):
-        #     d = d2
+        if (value_met == "Correlación convencional"):
+            d = d
+        elif (value_met == "MODWT"):
+            d = d2
         
         error = ((np.abs(((vector_distancia[count])/100)*line_distance - d))/(((vector_distancia[count])/100)*line_distance))*100
         error_array[count] = error
@@ -372,7 +371,7 @@ win.title("Aplicación para localización de fallas - PF202130")
 label1 = tkinter.Label(tab1,text = "Ingrese el valor de la frecuencia de muestreo:").place(x = 20, y = 50)  
 label2 = tkinter.Label(tab1,text = "Ingrese el valor de la velocidad de propagación:").place(x = 20, y = 80) 
 label3 = tkinter.Label(tab1,text = "Ingrese el valor de la impedancia característica:").place(x = 20, y = 110) 
-# label4 = tkinter.Label(tab1,text = "Seleccione método de cálculo:").place(x = 20, y = 140) 
+label4 = tkinter.Label(tab1,text = "Seleccione método de cálculo:").place(x = 20, y = 140) 
 label5 = tkinter.Label(tab1,text = "Programa para la localización de fallas utilizando ondas viajeras", font=('Helvetica', 18, 'bold')).place(x = 360, y = 10)  
 
 labelText = tkinter.StringVar()
@@ -397,7 +396,7 @@ label1 = tkinter.Label(tab2,text = "Ingrese la distancia de la línea (en km):")
 entry4 = tkinter.Entry(tab2)
 entry4.place(x = 280, y = 50)
 
-# label6 = tkinter.Label(tab2,text = "Seleccione método de cálculo:").place(x = 20, y = 80) 
+label6 = tkinter.Label(tab2,text = "Seleccione método de cálculo:").place(x = 20, y = 80) 
 
 def VarReading():
     global delta_t
@@ -441,15 +440,15 @@ combo = ttk.Combobox(tab1,values=["Señales de entrada", "Señales transformadas
 combo.set("Seleccione la gráfica...")
 combo.place(x = 1100, y = 140)
 
-# widget_var2 = tkinter.StringVar()
-# combo2 = ttk.Combobox(tab1,values=["Correlación convencional", "MODWT"])
-# combo2.set("Seleccione método...")
-# combo2.place(x = 280, y = 140)
+widget_var2 = tkinter.StringVar()
+combo2 = ttk.Combobox(tab1,values=["Correlación convencional", "MODWT"])
+combo2.set("Seleccione método...")
+combo2.place(x = 280, y = 140)
 
-# widget_var22 = tkinter.StringVar()
-# combo22 = ttk.Combobox(tab2,values=["Correlación convencional", "MODWT"])
-# combo22.set("Seleccione método...")
-# combo22.place(x = 280, y = 80)
+widget_var22 = tkinter.StringVar()
+combo22 = ttk.Combobox(tab2,values=["Correlación convencional", "MODWT"])
+combo22.set("Seleccione método...")
+combo22.place(x = 280, y = 80)
 
 
 
