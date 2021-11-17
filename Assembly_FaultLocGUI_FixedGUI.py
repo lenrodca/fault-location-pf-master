@@ -40,7 +40,7 @@ tab3 = ttk.Frame(tabControl)
 
 tabControl.add(tab1, text ='Localización de fallas')
 tabControl.add(tab2, text ='Validación del método')
-tabControl.add(tab3, text ='Ayuda')
+tabControl.add(tab3, text ='Manual de Usuario')
 tabControl.pack(expand = 1, fill ="both")
 
 
@@ -188,14 +188,14 @@ def FaultLoc():
 
     #DISTANCIA CORRELACION CONVENCIONAL
     d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
-    d = d[0,0]
+    d = round(d[0,0],4)
 
     #DISTANCIA MODWT
     d2 = ((velprop*(np.abs(time_vector[peaks2[tau_11]]-time_vector[peaks2[tau_22]])))/(2))
-    d2 = d2[0,0]
+    d2 = round(d2[0,0],4)
 
-    d2 = str(d2) + ' ' + 'KM'
-    d = str(d) + ' ' + 'KM'
+    d2 = str(d2) + ' ' + 'km'
+    d = str(d) + ' ' + 'km'
     print (d)
     print(d2)
     
@@ -204,6 +204,8 @@ def FaultLoc():
         labelText.set(d)
     elif(value_d == "MODWT"):
         labelText.set(d2)
+    global label_d1    
+    label_d1 = tkinter.Label(tab1,text = "La distancia de la falla calculada es...", fg = "black", font =('Helvetica', 12)).place(x = 550, y = 65)    
 
     
 
@@ -370,17 +372,17 @@ win.geometry("1280x720")
 win.title("Aplicación para localización de fallas - PF202130")
 
 
-label1 = tkinter.Label(tab1,text = "Ingrese el valor de la frecuencia de muestreo:").place(x = 20, y = 50)  
-label2 = tkinter.Label(tab1,text = "Ingrese el valor de la velocidad de propagación:").place(x = 20, y = 80) 
-label3 = tkinter.Label(tab1,text = "Ingrese el valor de la impedancia característica:").place(x = 20, y = 110) 
-label4 = tkinter.Label(tab1,text = "Seleccione método de cálculo:").place(x = 20, y = 140) 
-label5 = tkinter.Label(tab1,text = "Programa para la localización de fallas utilizando ondas viajeras", font=('Helvetica', 18, 'bold')).place(x = 360, y = 10) 
-label9 = tkinter.Label(tab2,text = "Validación de métodología", font=('Helvetica', 18, 'bold')).place(x = 500, y = 10)   
+label1 = tkinter.Label(tab1,text = "Ingrese el valor de la frecuencia de muestreo:").place(x = 20, y = 65)  
+label2 = tkinter.Label(tab1,text = "Ingrese el valor de la velocidad de propagación:").place(x = 20, y = 100) 
+label3 = tkinter.Label(tab1,text = "Ingrese el valor de la impedancia característica:").place(x = 20, y = 140) 
+label4 = tkinter.Label(tab1,text = "Seleccione método de cálculo:").place(x = 20, y = 180) 
+label5 = tkinter.Label(tab1,text = "Herramienta para la localización de fallas utilizando teoría de ondas viajeras", font=('Helvetica', 18, 'bold')).place(x = 200, y = 10)  
+labelalt = tkinter.Label(tab2,text = "Validación/Desempeño de la Herramienta Computacional", font=('Helvetica', 18, 'bold')).place(x = 320, y = 10)  
 
 labelText = tkinter.StringVar()
 labelText2 = tkinter.StringVar()
 
-label_d1 = tkinter.Label(tab1,text = "La distancia de la falla calculada es...", fg = "black", font =('Helvetica', 12)).place(x = 550, y = 50 )
+# label_d1 = tkinter.Label(tab1,text = "La distancia de la falla calculada es...", fg = "black", font =('Helvetica', 12)).place(x = 550, y = 65)
 label_d2 = tkinter.Label(tab1,textvariable= labelText, fg = "green", font =('Helvetica', 30, 'bold')).place(x = 550, y = 100 )
 
 # img = ImageTk.PhotoImage(Image.open("FaultLocApp.png"))
@@ -389,17 +391,17 @@ label_d2 = tkinter.Label(tab1,textvariable= labelText, fg = "green", font =('Hel
 # label_e2 = tkinter.Label(win,textvariable= labelText2, fg = "blue", font =('Helvetica', 12, 'bold')).place(x = 755, y = 70 )
 
 entry = tkinter.Entry(tab1)
-entry.place(x = 280, y = 50)
+entry.place(x = 280, y = 65)
 entry2 = tkinter.Entry(tab1)
-entry2.place(x = 280, y = 80)
+entry2.place(x = 280, y = 100)
 entry3 = tkinter.Entry(tab1)
-entry3.place(x = 280, y = 110)
+entry3.place(x = 280, y = 140)
 
-label1 = tkinter.Label(tab2,text = "Ingrese la distancia de la línea (en km):").place(x = 20, y = 50)  
+label1 = tkinter.Label(tab2,text = "Ingrese la distancia de la línea (en km):").place(x = 20, y = 65)  
 entry4 = tkinter.Entry(tab2)
-entry4.place(x = 280, y = 50)
+entry4.place(x = 280, y = 65)
 
-label6 = tkinter.Label(tab2,text = "Seleccione método de cálculo:").place(x = 20, y = 80) 
+label6 = tkinter.Label(tab2,text = "Seleccione método de cálculo:").place(x = 20, y = 105) 
 
 def VarReading():
     global delta_t
@@ -431,46 +433,41 @@ def VarReading2():
     
     
 button = tkinter.Button(tab1, text='Abrir archivo .csv', command=UploadAction)
-button.place(x = 1120, y = 50)
+button.place(x = 1120, y = 65)
 button = tkinter.Button(tab2, text='Abrir archivos .csv', command=UploadAction2)
-button.place(x = 1000, y = 50)
-buttonrun = tkinter.Button(tab1, text='Ejecutar Script', command=lambda:[clearCanv(), VarReading(), FaultLoc()])
-buttonrun.place(x = 1130, y = 80)
+button.place(x = 1000, y = 65)
+buttonrun = tkinter.Button(tab1, text='Ejecutar Script', command=lambda:[VarReading(), FaultLoc()])
+buttonrun.place(x = 1130, y = 100)
 
 
 widget_var = tkinter.StringVar()
 combo = ttk.Combobox(tab1,values=["Señales de entrada", "Señales transformadas", "Ondas Viajeras", "Correlación"])
 combo.set("Seleccione la gráfica...")
-combo.place(x = 1100, y = 140)
+combo.place(x = 1100, y = 180)
 
 widget_var2 = tkinter.StringVar()
 combo2 = ttk.Combobox(tab1,values=["Correlación convencional", "MODWT"])
 combo2.set("Seleccione método...")
-combo2.place(x = 280, y = 140)
+combo2.place(x = 280, y = 180)
 
 widget_var22 = tkinter.StringVar()
 combo22 = ttk.Combobox(tab2,values=["Correlación convencional", "MODWT"])
 combo22.set("Seleccione método...")
-combo22.place(x = 280, y = 80)
-
-
+combo22.place(x = 280, y = 105)
 
 fig1 = plt.figure(1,figsize=(6,4))
+fig1.patch.set_facecolor('#F0F0F0')
 canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
 widg = canvas.get_tk_widget()
 # widg.pack(padx=50, pady=170)
-widg.place(x=80,y=170,height=500,width=1080)
+widg.place(x=80,y=215,height=440,width=1080)
     
 fig2 = plt.figure(2,figsize=(6,4))
+fig2.patch.set_facecolor('#F0F0F0')
 canvas2 = FigureCanvasTkAgg(fig2, master=tab2)  # A tk.DrawingArea.
 widg2 = canvas2.get_tk_widget()
 # widg2.pack(padx=50, pady=170)
-widg2.place(x=80,y=140,height=500,width=1080)
-
-# fig3 = plt.figure(3,figsize=(6,4))
-# canvas3 = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
-# widg3 = canvas3.get_tk_widget()
-# widg3.pack(padx=50, pady=170,side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+widg2.place(x=80,y=215,height=440,width=1080)
 
 def Graph2():
     global vector_distancia, error_array, canvas2
@@ -479,10 +476,11 @@ def Graph2():
     print(error_array)
 
     fig2 = plt.figure(2,figsize=(6,4))
+    fig2.patch.set_facecolor('#F0F0F0')
     canvas2 = FigureCanvasTkAgg(fig2, master=tab2)  # A tk.DrawingArea.
     widg2 = canvas2.get_tk_widget()
     # widg2.pack(padx=50, pady=170)
-    widg2.place(x=80,y=140,height=500,width=1080)
+    widg2.place(x=80,y=160,height=440,width=1080)
     canvas2.draw()
 
     toolbar2 = NavigationToolbar2Tk(canvas2, tab2, pack_toolbar=False)
@@ -529,10 +527,11 @@ def Graph():
         # canvas.get_tk_widget().pack_forget()
        
         fig1 = plt.figure(1,figsize=(6,4))
+        fig1.patch.set_facecolor('#F0F0F0')
         canvas = FigureCanvasTkAgg(fig1, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
         # widg.pack(padx=50, pady=170)
-        widg.place(x=80,y=170,height=500,width=1080)
+        widg.place(x=80,y=215,height=440,width=1080)
         canvas.draw()
 
         toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
@@ -572,10 +571,11 @@ def Graph():
         # canvas.get_tk_widget().pack_forget()
 
         fig2 = plt.figure(2,figsize=(6,4))
+        fig2.patch.set_facecolor('#F0F0F0')
         canvas = FigureCanvasTkAgg(fig2, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
         # widg.pack(padx=50, pady=170)
-        widg.place(x=80,y=170,height=500,width=1080)
+        widg.place(x=80,y=215,height=440,width=1080)
         canvas.draw()
 
         toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
@@ -590,7 +590,7 @@ def Graph():
         plot1.plot(time_vector,A0_k_vector,'g')
          # Agregar punto de falla en inputs
         plot1.axvline(x=0.016, color='k', linestyle='--')
-        plot1.legend(labels=['Ad', 'Aq', 'A0','Falla'],loc='lower left')
+        plot1.legend(labels=['Ph-A', 'Ph-B', 'Ph-C','Falla'],loc='lower left')
         plot1.title.set_text("Señales de corriente - Transformadas")
         plot1.set_xlabel('Tiempo (s)')
         plot1.set_ylabel('Corriente (A)')
@@ -600,7 +600,7 @@ def Graph():
         plot2.plot(time_vector,V0_k_vector,'g')
         # Agregar punto de falla en inputs
         plot2.axvline(x=0.016, color='k', linestyle='--')
-        plot2.legend(labels=['Vd', 'Vq', 'V0','Falla'],loc='lower left')
+        plot2.legend(labels=['Ph-A', 'Ph-B', 'Ph-C','Falla'],loc='lower left')
         plot2.title.set_text("Señales de tensión - Transformadas")
         plot2.set_xlabel('Tiempo (s)')
         plot2.set_ylabel('Voltaje (V)')
@@ -612,10 +612,11 @@ def Graph():
         # canvas.get_tk_widget().pack_forget()
 
         fig3 = plt.figure(3,figsize=(6,4))
+        fig3.patch.set_facecolor('#F0F0F0')
         canvas = FigureCanvasTkAgg(fig3, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
         # widg.pack(padx=50, pady=170)
-        widg.place(x=80,y=170,height=500,width=1080)
+        widg.place(x=80,y=215,height=440,width=1080)
         canvas.draw()
 
         toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
@@ -648,10 +649,11 @@ def Graph():
         # canvas.get_tk_widget().pack_forget()
 
         fig4 = plt.figure(4,figsize=(6,4))
+        fig4.patch.set_facecolor('#F0F0F0')
         canvas = FigureCanvasTkAgg(fig4, master=tab1)  # A tk.DrawingArea.
         widg = canvas.get_tk_widget()
         # widg.pack(padx=50, pady=170)
-        widg.place(x=80,y=170,height=500,width=1080)
+        widg.place(x=80,y=215,height=440,width=1080)
         canvas.draw()
 
         toolbar = NavigationToolbar2Tk(canvas, tab1, pack_toolbar=False)
@@ -684,15 +686,10 @@ def Graph():
 
 
 buttongraph = tkinter.Button(tab1, text='Realizar Gráfica', command=lambda:[clearCanv(),Graph()])
-buttongraph.place(x = 1125, y = 110)
+buttongraph.place(x = 1125, y = 140)
 
 buttongraph2 = tkinter.Button(tab2, text='Realizar Validación', command=lambda:[VarReading2(),FaultLoc2(),Graph2()])
-buttongraph2.place(x = 1000, y = 80)
+buttongraph2.place(x = 1000, y = 105)
 
 win.resizable(0,0)
 win.mainloop()
-
-
-
-
-
