@@ -19,7 +19,6 @@ import heapq
 from scipy.signal import argrelextrema
 from PIL import ImageTk, Image
 from modwt import modwt
-from tkPDFViewer import tkPDFViewer as pdf
 
 import csv
 global filename
@@ -43,12 +42,6 @@ tabControl.add(tab1, text ='Localización de fallas')
 tabControl.add(tab2, text ='Validación del método')
 tabControl.add(tab3, text ='Manual de Usuario')
 tabControl.pack(expand = 1, fill ="both")
-
-v1 = pdf.ShowPdf()
-v2 = v1.pdf_view(tab3,
-                 pdf_location=r"Manual de Usuario PFLOC.pdf",
-                 width=80, height=100)
-v2.pack()
 
 
 def UploadAction():
@@ -195,11 +188,11 @@ def FaultLoc():
 
     #DISTANCIA CORRELACION CONVENCIONAL
     d = ((velprop*(np.abs(time_vector[peaks[tau_1]]-time_vector[peaks[tau_2]])))/(2))
-    d = round(d[0,0],4)
+    d = d[0,0]
 
     #DISTANCIA MODWT
     d2 = ((velprop*(np.abs(time_vector[peaks2[tau_11]]-time_vector[peaks2[tau_22]])))/(2))
-    d2 = round(d2[0,0],4)
+    d2 = d2[0,0]
 
     d2 = str(d2) + ' ' + 'km'
     d = str(d) + ' ' + 'km'
@@ -379,12 +372,12 @@ win.geometry("1280x720")
 win.title("Aplicación para localización de fallas - PF202130")
 
 
-label1 = tkinter.Label(tab1,text = "Ingrese el valor del tiempo de muestreo:").place(x = 20, y = 65)  
+label1 = tkinter.Label(tab1,text = "Ingrese el valor de la frecuencia de muestreo:").place(x = 20, y = 65)  
 label2 = tkinter.Label(tab1,text = "Ingrese el valor de la velocidad de propagación:").place(x = 20, y = 100) 
 label3 = tkinter.Label(tab1,text = "Ingrese el valor de la impedancia característica:").place(x = 20, y = 140) 
 label4 = tkinter.Label(tab1,text = "Seleccione método de cálculo:").place(x = 20, y = 180) 
-label5 = tkinter.Label(tab1,text = "Herramienta para la localización de fallas - Ondas viajeras", font=('Helvetica', 18, 'bold')).place(x = 380, y = 10)  
-labelalt = tkinter.Label(tab2,text = "Validación/Desempeño de la localización", font=('Helvetica', 18, 'bold')).place(x = 450, y = 10)  
+label5 = tkinter.Label(tab1,text = "Herramienta para la localización de fallas utilizando teoría de ondas viajeras", font=('Helvetica', 18, 'bold')).place(x = 200, y = 10)  
+labelalt = tkinter.Label(tab2,text = "Validación/Desempeño de la Herramienta Computacional", font=('Helvetica', 18, 'bold')).place(x = 320, y = 10)  
 
 labelText = tkinter.StringVar()
 labelText2 = tkinter.StringVar()
